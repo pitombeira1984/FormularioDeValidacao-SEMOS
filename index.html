@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEMOS – Validação FINEP | INOTEC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --azul:        #1F4E79;
+    --azul-med:    #2E75B6;
+    --azul-claro:  #D6E4F0;
+    --verde:       #375623;
+    --verde-claro: #E2EFDA;
+    --vermelho:    #C00000;
+    --verm-claro:  #FCE4D6;
+    --amarelo:     #FFF2CC;
+    --cinza:       #F4F6F9;
+    --cinza-borda: #DEE2E6;
+    --branco:      #FFFFFF;
+    --texto:       #212529;
+    --texto-leve:  #6C757D;
+    --radius:      10px;
+    --sombra:      0 2px 12px rgba(0,0,0,.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--cinza);
+    color: var(--texto);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── HEADER ── */
+  .app-header {
+    background: var(--azul);
+    color: #fff;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .app-header h1 { font-size: 16px; font-weight: 700; letter-spacing: .3px; }
+  .app-header span { font-size: 12px; opacity: .75; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+
+  /* ── TABS DE EMPRESA ── */
+  .tab-bar {
+    background: var(--branco);
+    border-radius: var(--radius);
+    box-shadow: var(--sombra);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tab-bar label { font-size: 12px; font-weight: 600; color: var(--azul); white-space: nowrap; }
+  .empresa-select {
+    flex: 1; min-width: 180px;
+    padding: 8px 12px;
+    border: 2px solid var(--azul-claro);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--texto);
+    background: var(--branco);
+    cursor: pointer;
+  }
+  .empresa-select:focus { outline: none; border-color: var(--azul-med); }
+
+  /* ── CARD / SEÇÃO ── */
+  .card {
+    background: var(--branco);
+    border-radius: var(--radius);
+    box-shadow: var(--sombra);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--azul);
+    color: #fff;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-header .num {
+    background: rgba(255,255,255,.2);
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; flex-shrink: 0;
+  }
+  .card-body { padding: 20px; }
+
+  /* ── GRID DE CAMPOS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+  .col-span-2 { grid-column: span 2; }
+  .col-span-3 { grid-column: span 3; }
+  .col-span-4 { grid-column: span 4; }
+
+  @media (max-width: 640px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .col-span-2, .col-span-3, .col-span-4 { grid-column: span 1; }
+  }
+
+  /* ── CAMPO ── */
+  .campo { display: flex; flex-direction: column; gap: 4px; }
+  .campo label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--azul);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .campo label .req { color: var(--vermelho); }
+
+  .campo input,
+  .campo select,
+  .campo textarea {
+    padding: 9px 12px;
+    border: 1.5px solid var(--cinza-borda);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--texto);
+    background: var(--branco);
+    transition: border-color .2s, box-shadow .2s;
+    width: 100%;
+  }
+  .campo input:focus,
+  .campo select:focus,
+  .campo textarea:focus {
+    outline: none;
+    border-color: var(--azul-med);
+    box-shadow: 0 0 0 3px rgba(46,117,182,.12);
+  }
+  .campo input[readonly] {
+    background: var(--cinza);
+    color: var(--azul);
+    font-weight: 700;
+    border-color: var(--azul-claro);
+  }
+  .campo textarea { resize: vertical; min-height: 72px; }
+  .campo .hint { font-size: 11px; color: var(--texto-leve); }
+
+  /* ── RADIO / CHECKBOX ── */
+  .opcoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+  .opcao {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    border: 1.5px solid var(--cinza-borda);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+    font-size: 13px;
+    user-select: none;
+    background: var(--branco);
+  }
+  .opcao:hover { border-color: var(--azul-med); background: var(--azul-claro); }
+  .opcao input { accent-color: var(--azul-med); width: 14px; height: 14px; cursor: pointer; }
+  .opcao.selecionada { border-color: var(--azul-med); background: var(--azul-claro); font-weight: 600; color: var(--azul); }
+
+  /* ── ESCALA 1-5 ── */
+  .escala { display: flex; gap: 6px; flex-wrap: wrap; }
+  .escala-btn {
+    width: 44px; height: 44px;
+    border: 2px solid var(--cinza-borda);
+    border-radius: 8px;
+    background: var(--branco);
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+    color: var(--texto-leve);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .escala-btn:hover { border-color: var(--azul-med); color: var(--azul-med); }
+  .escala-btn.ativo { background: var(--azul-med); border-color: var(--azul-med); color: #fff; }
+  .escala-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--texto-leve); margin-top: 3px; }
+
+  /* ── SUBSEÇÃO ── */
+  .subsecao {
+    background: var(--azul-claro);
+    border-left: 4px solid var(--azul-med);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 16px 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--azul);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  /* ── RESULTADO CALCULADO ── */
+  .resultado-box {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .resultado-box.ok    { background: var(--verde-claro); border: 1.5px solid #70AD47; }
+  .resultado-box.fail  { background: var(--verm-claro);  border: 1.5px solid var(--vermelho); }
+  .resultado-box.neutro{ background: var(--azul-claro);  border: 1.5px solid var(--azul-med); }
+  .resultado-box .rb-label { font-size: 12px; font-weight: 700; color: var(--azul); }
+  .resultado-box .rb-valor { font-size: 22px; font-weight: 800; }
+  .resultado-box.ok   .rb-valor { color: var(--verde); }
+  .resultado-box.fail .rb-valor { color: var(--vermelho); }
+  .resultado-box.neutro .rb-valor { color: var(--azul); }
+  .resultado-box .rb-meta { font-size: 12px; }
+
+  /* ── TABELA OEE / PRODUTIVIDADE ── */
+  .tabela-indicador {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .tabela-indicador th {
+    background: var(--azul-med);
+    color: #fff;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .tabela-indicador th:first-child { text-align: left; }
+  .tabela-indicador td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--cinza-borda);
+  }
+  .tabela-indicador tr:nth-child(even) td { background: var(--cinza); }
+  .tabela-indicador .td-label { font-weight: 600; color: var(--azul); }
+  .tabela-indicador .td-calc {
+    text-align: center;
+    font-weight: 700;
+    background: var(--azul-claro) !important;
+    color: var(--azul);
+  }
+  .tabela-indicador .td-resultado {
+    text-align: center;
+    font-weight: 800;
+    font-size: 15px;
+  }
+
+  /* ── BOTÕES ── */
+  .btn {
+    padding: 9px 18px;
+    border-radius: 7px;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: .2px;
+  }
+  .btn-primario   { background: var(--azul-med); color: #fff; }
+  .btn-primario:hover { background: var(--azul); }
+  .btn-sucesso    { background: #70AD47; color: #fff; }
+  .btn-sucesso:hover { background: #548235; }
+  .btn-perigo     { background: var(--vermelho); color: #fff; }
+  .btn-perigo:hover { background: #9C0000; }
+  .btn-neutro     { background: var(--cinza-borda); color: var(--texto); }
+  .btn-neutro:hover { background: #c8cdd2; }
+  .btn-outline    { background: transparent; color: var(--azul-med); border: 2px solid var(--azul-med); }
+  .btn-outline:hover { background: var(--azul-claro); }
+
+  /* ── BARRA DE AÇÕES ── */
+  .barra-acoes {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--branco);
+    border-top: 1px solid var(--cinza-borda);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    z-index: 99;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+  }
+  .barra-acoes-esq, .barra-acoes-dir { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── BADGE DE STATUS ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-ok   { background: var(--verde-claro); color: var(--verde); }
+  .badge-fail { background: var(--verm-claro);  color: var(--vermelho); }
+  .badge-pend { background: var(--amarelo);      color: #7B6000; }
+
+  /* ── PROGRESSO ── */
+  .progresso-bar {
+    height: 4px;
+    background: var(--cinza-borda);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .progresso-fill {
+    height: 100%;
+    background: var(--azul-med);
+    border-radius: 2px;
+    transition: width .4s ease;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.aberto { display: flex; }
+  .modal {
+    background: var(--branco);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 420px; width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  }
+  .modal h3 { color: var(--azul); margin-bottom: 12px; }
+  .modal p  { color: var(--texto-leve); font-size: 13px; margin-bottom: 20px; }
+  .modal .modal-acoes { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; top: 70px; right: 16px;
+    background: var(--azul);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 300;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all .3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok   { background: #70AD47; }
+  .toast.erro { background: var(--vermelho); }
+
+  /* ── DASHBOARD RESUMO ── */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .dash-card {
+    background: var(--branco);
+    border-radius: var(--radius);
+    box-shadow: var(--sombra);
+    padding: 16px;
+    text-align: center;
+  }
+  .dash-card .dash-num { font-size: 28px; font-weight: 800; color: var(--azul-med); }
+  .dash-card .dash-label { font-size: 11px; color: var(--texto-leve); margin-top: 4px; }
+
+  /* ── LISTA DE EMPRESAS ── */
+  .lista-empresas { display: flex; flex-direction: column; gap: 8px; }
+  .empresa-item {
+    background: var(--branco);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    box-shadow: var(--sombra);
+    cursor: pointer;
+    transition: box-shadow .15s;
+    border-left: 4px solid var(--cinza-borda);
+  }
+  .empresa-item:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+  .empresa-item.ok   { border-left-color: #70AD47; }
+  .empresa-item.fail { border-left-color: var(--vermelho); }
+  .empresa-item.pend { border-left-color: #FFC000; }
+  .empresa-item .ei-nome { font-weight: 700; font-size: 14px; }
+  .empresa-item .ei-info { font-size: 12px; color: var(--texto-leve); }
+  .empresa-item .ei-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ── ABAS PRINCIPAIS ── */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--branco);
+    padding: 6px;
+    border-radius: var(--radius);
+    box-shadow: var(--sombra);
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto-leve);
+    transition: all .15s;
+    text-align: center;
+  }
+  .nav-tab:hover { background: var(--azul-claro); color: var(--azul); }
+  .nav-tab.ativo { background: var(--azul); color: #fff; }
+
+  .view { display: none; }
+  .view.ativo { display: block; }
+
+  .divider { height: 1px; background: var(--cinza-borda); margin: 16px 0; }
+  .info-formula {
+    font-size: 11px; color: var(--texto-leve); font-style: italic;
+    background: var(--cinza); border-radius: 4px; padding: 4px 8px; margin-top: 4px;
+  }
+
+  /* Selector de número (time picker substitute) */
+  .num-stepper {
+    display: flex; align-items: center; gap: 0;
+    border: 1.5px solid var(--cinza-borda);
+    border-radius: 6px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .num-stepper input {
+    flex: 1; border: none; text-align: center;
+    font-size: 16px; font-weight: 700;
+    color: var(--azul);
+    padding: 8px 4px;
+    min-width: 0;
+  }
+  .num-stepper input:focus { outline: none; }
+  .num-stepper button {
+    width: 36px; height: 38px;
+    border: none;
+    background: var(--azul-claro);
+    color: var(--azul-med);
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .num-stepper button:hover { background: var(--azul-med); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div>
+    <h1>⚙️ SEMOS – Validação FINEP Smart Factory</h1>
+    <span>INOTEC – Inovação e Tecnologia | CNPJ: 41.561.496/0001-50</span>
+  </div>
+  <div class="header-right">
+    <span id="info-salvo" style="font-size:11px;opacity:.7;"></span>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL CONFIRMAÇÃO -->
+<div class="modal-overlay" id="modal-limpar">
+  <div class="modal">
+    <h3>⚠️ Limpar dados desta empresa?</h3>
+    <p>Esta ação apagará todos os dados preenchidos para a empresa selecionada. Isso não pode ser desfeito.</p>
+    <div class="modal-acoes">
+      <button class="btn btn-neutro" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-perigo" onclick="confirmarLimpar()">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTAINER PRINCIPAL -->
+<div class="container">
+
+  <!-- ABAS PRINCIPAIS -->
+  <div class="nav-tabs">
+    <button class="nav-tab ativo" onclick="mudarView('formulario', this)">📋 Formulário</button>
+    <button class="nav-tab" onclick="mudarView('painel', this)">📊 Painel Geral</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- VIEW: FORMULÁRIO -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div id="view-formulario" class="view ativo">
+
+    <!-- Seletor de empresa -->
+    <div class="tab-bar">
+      <label>Empresa Validadora:</label>
+      <select class="empresa-select" id="select-empresa" onchange="carregarEmpresa()">
+        <option value="">— Selecione —</option>
+      </select>
+      <div id="badge-status-empresa"></div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-neutro" onclick="abrirModal()" title="Limpar dados desta empresa">🗑️ Limpar</button>
+      </div>
+    </div>
+
+    <!-- PROGRESSO -->
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--texto-leve);margin-bottom:4px;">
+        <span>Progresso do preenchimento</span>
+        <span id="txt-progresso">0%</span>
+      </div>
+      <div class="progresso-bar"><div class="progresso-fill" id="barra-progresso" style="width:0%"></div></div>
+    </div>
+
+    <!-- ── 1. IDENTIFICAÇÃO ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">1</div> Identificação da Empresa Validadora</div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div class="campo col-span-2">
+            <label>Nome da Empresa <span class="req">*</span></label>
+            <input type="text" id="nome_empresa" placeholder="Razão social completa" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>CNPJ <span class="req">*</span></label>
+            <input type="text" id="cnpj" placeholder="XX.XXX.XXX/XXXX-XX" oninput="mascaraCNPJ(this);salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>Segmento de Atuação <span class="req">*</span></label>
+            <select id="segmento" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>Metalmecânico</option>
+              <option>Automotivo</option>
+              <option>Construção Civil / Estruturas Metálicas</option>
+              <option>Naval</option>
+              <option>Petróleo e Gás</option>
+              <option>Agronegócio / Implementos Agrícolas</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Responsável <span class="req">*</span></label>
+            <input type="text" id="responsavel" placeholder="Nome completo" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>Cargo <span class="req">*</span></label>
+            <input type="text" id="cargo" placeholder="Ex: Gerente de Produção" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>E-mail</label>
+            <input type="email" id="email" placeholder="contato@empresa.com" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>Nº de Colaboradores</label>
+            <select id="num_colaboradores" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>Até 9 (Microempresa)</option>
+              <option>De 10 a 49 (Pequena empresa)</option>
+              <option>De 50 a 99</option>
+              <option>De 100 a 499</option>
+              <option>Acima de 500</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Nº de Máquinas de Solda</label>
+            <select id="num_maquinas" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>1</option><option>2</option><option>3</option>
+              <option>4 a 6</option><option>7 a 10</option><option>Mais de 10</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 2. PROCESSO ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">2</div> Descrição do Processo Validado</div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div class="campo col-span-2">
+            <label>Processo(s) de Soldagem <span class="req">*</span></label>
+            <div class="opcoes" id="processos">
+              <label class="opcao"><input type="checkbox" value="Eletrodo Revestido (SMAW)" onchange="salvarAuto()"> Eletrodo Revestido (SMAW)</label>
+              <label class="opcao"><input type="checkbox" value="TIG (GTAW)" onchange="salvarAuto()"> TIG (GTAW)</label>
+              <label class="opcao"><input type="checkbox" value="MIG/MAG (GMAW)" onchange="salvarAuto()"> MIG/MAG (GMAW)</label>
+              <label class="opcao"><input type="checkbox" value="Arco Submerso (SAW)" onchange="salvarAuto()"> Arco Submerso (SAW)</label>
+              <label class="opcao"><input type="checkbox" value="Solda a Ponto" onchange="salvarAuto()"> Solda a Ponto</label>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Equipamento Monitorado <span class="req">*</span></label>
+            <input type="text" id="equipamento" placeholder="Ex: Inversora MIG 250A" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>Turno de Operação <span class="req">*</span></label>
+            <select id="turno" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>1 turno (até 8h/dia)</option>
+              <option>2 turnos (até 16h/dia)</option>
+              <option>3 turnos (até 24h/dia)</option>
+              <option>Turno variável</option>
+            </select>
+          </div>
+          <div class="campo col-span-2">
+            <label>Controle ANTES do SEMOS</label>
+            <div class="opcoes" id="controle_antes">
+              <label class="opcao"><input type="radio" name="controle_antes" value="Sem controle – operação manual e empírica" onchange="salvarAuto()"> Sem controle</label>
+              <label class="opcao"><input type="radio" name="controle_antes" value="Controle visual pelo operador" onchange="salvarAuto()"> Visual pelo operador</label>
+              <label class="opcao"><input type="radio" name="controle_antes" value="Anotações manuais em papel" onchange="salvarAuto()"> Anotações em papel</label>
+              <label class="opcao"><input type="radio" name="controle_antes" value="Planilha manual" onchange="salvarAuto()"> Planilha manual</label>
+              <label class="opcao"><input type="radio" name="controle_antes" value="Sistema digital limitado" onchange="salvarAuto()"> Sistema digital limitado</label>
+            </div>
+          </div>
+          <div class="campo col-span-2">
+            <label>Como o SEMOS foi utilizado</label>
+            <div class="opcoes" id="uso_semos">
+              <label class="opcao"><input type="radio" name="uso_semos" value="Monitoramento contínuo em tempo real" onchange="salvarAuto()"> Contínuo em tempo real</label>
+              <label class="opcao"><input type="radio" name="uso_semos" value="Monitoramento parcial (turnos específicos)" onchange="salvarAuto()"> Parcial (turnos específicos)</label>
+              <label class="opcao"><input type="radio" name="uso_semos" value="Monitoramento em lotes/ciclos" onchange="salvarAuto()"> Lotes / ciclos</label>
+              <label class="opcao"><input type="radio" name="uso_semos" value="Consultado pontualmente" onchange="salvarAuto()"> Consultado pontualmente</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 3. PRODUTIVIDADE ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">3</div> Medição de Produtividade</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--texto-leve);margin-bottom:14px;">
+          <strong>Fórmula:</strong> Produtividade = Produção Total ÷ Horas Trabalhadas &nbsp;|&nbsp; <strong>Meta FINEP: ≥ 20%</strong>
+        </p>
+
+        <div class="campo" style="margin-bottom:14px;">
+          <label>Unidade de Produção Adotada <span class="req">*</span></label>
+          <div class="opcoes">
+            <label class="opcao"><input type="radio" name="unidade_prod" value="Peças soldadas" onchange="salvarAuto()"> Peças soldadas</label>
+            <label class="opcao"><input type="radio" name="unidade_prod" value="Juntas concluídas" onchange="salvarAuto()"> Juntas concluídas</label>
+            <label class="opcao"><input type="radio" name="unidade_prod" value="Passes de solda" onchange="salvarAuto()"> Passes de solda</label>
+            <label class="opcao"><input type="radio" name="unidade_prod" value="Metros de cordão" onchange="salvarAuto()"> Metros de cordão</label>
+            <label class="opcao"><input type="radio" name="unidade_prod" value="Conjuntos montados" onchange="salvarAuto()"> Conjuntos montados</label>
+          </div>
+        </div>
+
+        <div class="subsecao">📅 Período Inicial — Sem o SEMOS</div>
+        <div class="grid-4">
+          <div class="campo col-span-2">
+            <label>Período (de / até)</label>
+            <div style="display:flex;gap:8px;">
+              <input type="date" id="prod_ini_de" onchange="salvarAuto()" style="flex:1;">
+              <input type="date" id="prod_ini_ate" onchange="salvarAuto()" style="flex:1;">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Total Produzido (unidades) <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('prod_ini_qtd',-10)">−</button>
+              <input type="number" id="prod_ini_qtd" min="0" value="0" oninput="calcProdutividade();salvarAuto()">
+              <button onclick="stepValor('prod_ini_qtd',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Horas Trabalhadas <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('prod_ini_horas',-1)">−</button>
+              <input type="number" id="prod_ini_horas" min="0" step="0.5" value="0" oninput="calcProdutividade();salvarAuto()">
+              <button onclick="stepValor('prod_ini_horas',1)">+</button>
+            </div>
+          </div>
+          <div class="campo col-span-2">
+            <label>Produtividade Inicial (calculada)</label>
+            <input type="text" id="prod_ini_result" readonly placeholder="— calculado automaticamente —">
+            <span class="info-formula">Produção ÷ Horas</span>
+          </div>
+        </div>
+
+        <div class="subsecao">📅 Período Final — Com o SEMOS Ativo</div>
+        <div class="grid-4">
+          <div class="campo col-span-2">
+            <label>Período (de / até)</label>
+            <div style="display:flex;gap:8px;">
+              <input type="date" id="prod_fin_de" onchange="salvarAuto()" style="flex:1;">
+              <input type="date" id="prod_fin_ate" onchange="salvarAuto()" style="flex:1;">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Total Produzido (unidades) <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('prod_fin_qtd',-10)">−</button>
+              <input type="number" id="prod_fin_qtd" min="0" value="0" oninput="calcProdutividade();salvarAuto()">
+              <button onclick="stepValor('prod_fin_qtd',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Horas Trabalhadas <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('prod_fin_horas',-1)">−</button>
+              <input type="number" id="prod_fin_horas" min="0" step="0.5" value="0" oninput="calcProdutividade();salvarAuto()">
+              <button onclick="stepValor('prod_fin_horas',1)">+</button>
+            </div>
+          </div>
+          <div class="campo col-span-2">
+            <label>Produtividade Final (calculada)</label>
+            <input type="text" id="prod_fin_result" readonly placeholder="— calculado automaticamente —">
+          </div>
+        </div>
+        <div id="resultado-produtividade" class="resultado-box neutro" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ── 4. OEE ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">4</div> OEE – Eficiência Global dos Equipamentos</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--texto-leve);margin-bottom:14px;">
+          <strong>OEE = Disponibilidade × Desempenho × Qualidade</strong> &nbsp;|&nbsp; <strong>Meta FINEP: ≥ 10%</strong>
+        </p>
+
+        <!-- DISPONIBILIDADE -->
+        <div class="subsecao">⏱️ Disponibilidade = Tempo de Operação ÷ Tempo Planejado</div>
+        <div class="grid-4">
+          <div class="campo">
+            <label>Tempo Planejado – Inicial (min) <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('disp_tplan_ini',-30)">−</button>
+              <input type="number" id="disp_tplan_ini" min="0" value="480" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('disp_tplan_ini',30)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Tempo de Parada – Inicial (min) <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('disp_tpar_ini',-5)">−</button>
+              <input type="number" id="disp_tpar_ini" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('disp_tpar_ini',5)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Tempo Planejado – Final (min) <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('disp_tplan_fin',-30)">−</button>
+              <input type="number" id="disp_tplan_fin" min="0" value="480" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('disp_tplan_fin',30)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Tempo de Parada – Final (min) <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('disp_tpar_fin',-5)">−</button>
+              <input type="number" id="disp_tpar_fin" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('disp_tpar_fin',5)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Tempo Operação Inicial (calc.)</label>
+            <input type="text" id="disp_top_ini" readonly>
+          </div>
+          <div class="campo">
+            <label>Disponibilidade Inicial (%)</label>
+            <input type="text" id="disp_ini" readonly>
+          </div>
+          <div class="campo">
+            <label>Tempo Operação Final (calc.)</label>
+            <input type="text" id="disp_top_fin" readonly>
+          </div>
+          <div class="campo">
+            <label>Disponibilidade Final (%)</label>
+            <input type="text" id="disp_fin" readonly>
+          </div>
+        </div>
+
+        <!-- DESEMPENHO -->
+        <div class="subsecao">⚡ Desempenho = Produção Real ÷ Capacidade de Produção</div>
+        <div class="grid-4">
+          <div class="campo">
+            <label>Capacidade Produção – Inicial <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('desm_cap_ini',-10)">−</button>
+              <input type="number" id="desm_cap_ini" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('desm_cap_ini',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Produção Real – Inicial <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('desm_real_ini',-10)">−</button>
+              <input type="number" id="desm_real_ini" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('desm_real_ini',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Capacidade Produção – Final <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('desm_cap_fin',-10)">−</button>
+              <input type="number" id="desm_cap_fin" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('desm_cap_fin',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Produção Real – Final <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('desm_real_fin',-10)">−</button>
+              <input type="number" id="desm_real_fin" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('desm_real_fin',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Desempenho Inicial (%)</label>
+            <input type="text" id="desm_ini" readonly>
+          </div>
+          <div class="campo col-span-3">
+            <label>Desempenho Final (%)</label>
+            <input type="text" id="desm_fin" readonly>
+          </div>
+        </div>
+
+        <!-- QUALIDADE -->
+        <div class="subsecao">✅ Qualidade = Unidades Boas ÷ Unidades Produzidas</div>
+        <div class="grid-4">
+          <div class="campo">
+            <label>Unidades Produzidas – Inicial <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('qual_tot_ini',-10)">−</button>
+              <input type="number" id="qual_tot_ini" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('qual_tot_ini',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Unidades Boas – Inicial <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('qual_boas_ini',-10)">−</button>
+              <input type="number" id="qual_boas_ini" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('qual_boas_ini',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Unidades Produzidas – Final <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('qual_tot_fin',-10)">−</button>
+              <input type="number" id="qual_tot_fin" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('qual_tot_fin',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Unidades Boas – Final <span class="req">*</span></label>
+            <div class="num-stepper">
+              <button onclick="stepValor('qual_boas_fin',-10)">−</button>
+              <input type="number" id="qual_boas_fin" min="0" value="0" oninput="calcOEE();salvarAuto()">
+              <button onclick="stepValor('qual_boas_fin',10)">+</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Qualidade Inicial (%)</label>
+            <input type="text" id="qual_ini" readonly>
+          </div>
+          <div class="campo col-span-3">
+            <label>Qualidade Final (%)</label>
+            <input type="text" id="qual_fin" readonly>
+          </div>
+        </div>
+
+        <!-- RESULTADO OEE -->
+        <div class="subsecao">📊 Resultado OEE</div>
+        <table class="tabela-indicador" id="tabela-oee">
+          <thead>
+            <tr><th>Componente</th><th>Inicial</th><th>Final</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="td-label">Disponibilidade</td><td id="r_disp_ini" class="td-calc">—</td><td id="r_disp_fin" class="td-calc">—</td></tr>
+            <tr><td class="td-label">Desempenho</td><td id="r_desm_ini" class="td-calc">—</td><td id="r_desm_fin" class="td-calc">—</td></tr>
+            <tr><td class="td-label">Qualidade</td><td id="r_qual_ini" class="td-calc">—</td><td id="r_qual_fin" class="td-calc">—</td></tr>
+            <tr><td class="td-label" style="font-weight:800;font-size:15px;">OEE TOTAL</td><td id="r_oee_ini" class="td-resultado">—</td><td id="r_oee_fin" class="td-resultado">—</td></tr>
+          </tbody>
+        </table>
+        <div id="resultado-oee" class="resultado-box neutro" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ── 5. BENEFÍCIOS ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">5</div> Benefícios Observados</div>
+      <div class="card-body">
+        <div class="campo">
+          <label>Selecione os benefícios percebidos com o SEMOS <span class="req">*</span></label>
+          <div class="opcoes" id="beneficios">
+            <label class="opcao"><input type="checkbox" value="Redução de retrabalho e peças rejeitadas" onchange="salvarAuto()"> Redução de retrabalho</label>
+            <label class="opcao"><input type="checkbox" value="Padronização dos parâmetros de soldagem" onchange="salvarAuto()"> Padronização de parâmetros</label>
+            <label class="opcao"><input type="checkbox" value="Aumento da rastreabilidade" onchange="salvarAuto()"> Rastreabilidade</label>
+            <label class="opcao"><input type="checkbox" value="Redução de paradas não planejadas" onchange="salvarAuto()"> Menos paradas</label>
+            <label class="opcao"><input type="checkbox" value="Alertas em tempo real para o operador" onchange="salvarAuto()"> Alertas em tempo real</label>
+            <label class="opcao"><input type="checkbox" value="Redução do consumo de insumos" onchange="salvarAuto()"> Redução de insumos</label>
+            <label class="opcao"><input type="checkbox" value="Aumento de produtividade" onchange="salvarAuto()"> Aumento de produtividade</label>
+            <label class="opcao"><input type="checkbox" value="Monitoramento remoto" onchange="salvarAuto()"> Monitoramento remoto</label>
+            <label class="opcao"><input type="checkbox" value="Melhoria na qualidade do cordão de solda" onchange="salvarAuto()"> Qualidade do cordão</label>
+          </div>
+        </div>
+        <div style="margin-top:16px;" class="campo">
+          <label>Impacto geral do SEMOS na operação (1 a 5)</label>
+          <div class="escala" id="escala-impacto">
+            <button class="escala-btn" onclick="setEscala('impacto_geral',1,this)">1</button>
+            <button class="escala-btn" onclick="setEscala('impacto_geral',2,this)">2</button>
+            <button class="escala-btn" onclick="setEscala('impacto_geral',3,this)">3</button>
+            <button class="escala-btn" onclick="setEscala('impacto_geral',4,this)">4</button>
+            <button class="escala-btn" onclick="setEscala('impacto_geral',5,this)">5</button>
+          </div>
+          <div class="escala-label" style="width:228px;"><span>Mínimo</span><span>Máximo</span></div>
+          <input type="hidden" id="impacto_geral" value="">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 6. AVALIAÇÃO FUNCIONAL ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">6</div> Avaliação Funcional (1 = Ruim · 5 = Excelente)</div>
+      <div class="card-body" id="secao-avaliacao">
+        <!-- gerado por JS -->
+      </div>
+    </div>
+
+    <!-- ── 7. CONCLUSÃO ── -->
+    <div class="card">
+      <div class="card-header"><div class="num">7</div> Conclusão da Empresa Validadora</div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div class="campo">
+            <label>O SEMOS atendeu às expectativas? <span class="req">*</span></label>
+            <select id="atendeu" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>Sim, plenamente – superou as expectativas</option>
+              <option>Sim, parcialmente – atendeu aos pontos principais</option>
+              <option>Atendeu com ressalvas</option>
+              <option>Não atendeu às expectativas</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Recomendaria o SEMOS? <span class="req">*</span></label>
+            <select id="recomenda" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>Sim, com certeza</option>
+              <option>Sim, provavelmente</option>
+              <option>Talvez</option>
+              <option>Não recomendaria</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Interesse em continuar usando?</label>
+            <select id="continuar" onchange="salvarAuto()">
+              <option value="">— Selecione —</option>
+              <option>Sim – interesse em contratar</option>
+              <option>Sim – dependendo do custo</option>
+              <option>Ainda em análise</option>
+              <option>Não</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Nome do Signatário <span class="req">*</span></label>
+            <input type="text" id="signatario" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>CPF do Signatário</label>
+            <input type="text" id="cpf_sign" placeholder="XXX.XXX.XXX-XX" oninput="mascaraCPF(this);salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>Data do Preenchimento</label>
+            <input type="date" id="data_preenchi" oninput="salvarAuto()">
+          </div>
+          <div class="campo col-span-2">
+            <label>Observações Finais (opcional)</label>
+            <textarea id="obs_finais" placeholder="Comentários adicionais..." oninput="salvarAuto()"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /view-formulario -->
+
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- VIEW: PAINEL GERAL -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div id="view-painel" class="view">
+
+    <div class="dashboard-grid" id="dash-cards"></div>
+
+    <div class="card">
+      <div class="card-header">📋 Empresas Validadoras — Resumo</div>
+      <div class="card-body">
+        <div class="lista-empresas" id="lista-empresas-painel"></div>
+      </div>
+    </div>
+
+  </div><!-- /view-painel -->
+
+</div><!-- /container -->
+
+<!-- BARRA DE AÇÕES FIXA -->
+<div class="barra-acoes">
+  <div class="barra-acoes-esq">
+    <button class="btn btn-primario" onclick="salvarManual()">💾 Salvar</button>
+    <button class="btn btn-outline" onclick="exportarBackupJSON()">📦 Backup JSON</button>
+    <button class="btn btn-outline" onclick="document.getElementById('input-import').click()">📂 Importar JSON</button>
+    <input type="file" id="input-import" accept=".json" style="display:none" onchange="importarJSON(event)">
+  </div>
+  <div class="barra-acoes-dir">
+    <button class="btn btn-sucesso" onclick="exportarExcel()">📊 Exportar Excel FINEP</button>
+  </div>
+</div>
+
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════════════════════════
+const STORAGE_KEY = 'semos_validacao_v1';
+const NUM_EMPRESAS = 36;
+
+const CRITERIOS_AVAL = [
+  'Facilidade de instalação e configuração',
+  'Qualidade dos dados em tempo real',
+  'Usabilidade da interface web',
+  'Precisão dos alertas operacionais',
+  'Confiabilidade e estabilidade',
+  'Relevância das informações geradas',
+  'Satisfação geral com o SEMOS'
+];
+
+// ═══════════════════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════════════════
+let empresaAtual = 1;
+let dados = {};
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  gerarSecaoAvaliacao();
+  gerarSelectEmpresas();
+  carregarTodos();
+  empresaAtual = 1;
+  document.getElementById('select-empresa').value = '1';
+  carregarEmpresa();
+  atualizarInfoSalvo();
+});
+
+function gerarSelectEmpresas() {
+  const sel = document.getElementById('select-empresa');
+  for (let i = 1; i <= NUM_EMPRESAS; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Empresa ${i}`;
+    sel.appendChild(opt);
+  }
+}
+
+function gerarSecaoAvaliacao() {
+  const cont = document.getElementById('secao-avaliacao');
+  cont.innerHTML = '';
+  CRITERIOS_AVAL.forEach((c, i) => {
+    const id = `aval_${i}`;
+    cont.innerHTML += `
+      <div class="campo" style="margin-bottom:14px;">
+        <label>${c}</label>
+        <div class="escala" id="escala-${id}">
+          ${[1,2,3,4,5].map(n => `<button class="escala-btn" onclick="setEscala('${id}',${n},this)">${n}</button>`).join('')}
+        </div>
+        <div class="escala-label" style="width:228px;"><span>1 – Ruim</span><span>5 – Excelente</span></div>
+        <input type="hidden" id="${id}" value="">
+      </div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVEGAÇÃO
+// ═══════════════════════════════════════════════════════════
+function mudarView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('ativo'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('ativo'));
+  document.getElementById('view-' + id).classList.add('ativo');
+  btn.classList.add('ativo');
+  if (id === 'painel') atualizarPainel();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STEPPER
+// ═══════════════════════════════════════════════════════════
+function stepValor(id, delta) {
+  const el = document.getElementById(id);
+  const v = parseFloat(el.value) || 0;
+  el.value = Math.max(0, v + delta);
+  el.dispatchEvent(new Event('input'));
+}
+
+// ═══════════════════════════════════════════════════════════
+// ESCALAS
+// ═══════════════════════════════════════════════════════════
+function setEscala(id, val, btn) {
+  document.getElementById(id).value = val;
+  const cont = btn.parentElement;
+  cont.querySelectorAll('.escala-btn').forEach(b => b.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  salvarAuto();
+}
+
+function restaurarEscala(id, val) {
+  if (!val) return;
+  const cont = document.getElementById('escala-' + id) ||
+               document.querySelector(`#escala-impacto`);
+  const escalaId = id === 'impacto_geral' ? 'escala-impacto' : `escala-${id}`;
+  const escEl = document.getElementById(escalaId);
+  if (!escEl) return;
+  escEl.querySelectorAll('.escala-btn').forEach(b => {
+    b.classList.toggle('ativo', parseInt(b.textContent) === parseInt(val));
+  });
+  document.getElementById(id).value = val;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CÁLCULOS
+// ═══════════════════════════════════════════════════════════
+function n(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+function pct(v) { return (v * 100).toFixed(1) + '%'; }
+function fmt2(v) { return v.toFixed(2); }
+
+function calcProdutividade() {
+  const pIni = n('prod_ini_horas') > 0 ? n('prod_ini_qtd') / n('prod_ini_horas') : 0;
+  const pFin = n('prod_fin_horas') > 0 ? n('prod_fin_qtd') / n('prod_fin_horas') : 0;
+  document.getElementById('prod_ini_result').value = n('prod_ini_horas') > 0 ? fmt2(pIni) + ' unid/h' : '—';
+  document.getElementById('prod_fin_result').value = n('prod_fin_horas') > 0 ? fmt2(pFin) + ' unid/h' : '—';
+
+  const box = document.getElementById('resultado-produtividade');
+  if (pIni > 0 && pFin > 0) {
+    const var_ = ((pFin - pIni) / pIni) * 100;
+    const ok = var_ >= 20;
+    box.className = 'resultado-box ' + (ok ? 'ok' : 'fail');
+    box.style.display = 'flex';
+    box.innerHTML = `
+      <div><div class="rb-label">Variação de Produtividade</div>
+      <div class="rb-meta">Inicial: ${fmt2(pIni)} unid/h → Final: ${fmt2(pFin)} unid/h</div></div>
+      <div class="rb-valor">${var_ >= 0 ? '▲' : '▼'} ${Math.abs(var_).toFixed(1)}%</div>
+      <div>${ok ? '✅ Meta FINEP atingida (≥ 20%)' : '❌ Meta FINEP não atingida (< 20%)'}</div>`;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function calcOEE() {
+  const tPlanIni = n('disp_tplan_ini'), tParIni = n('disp_tpar_ini');
+  const tPlanFin = n('disp_tplan_fin'), tParFin = n('disp_tpar_fin');
+  const tOpIni = Math.max(0, tPlanIni - tParIni);
+  const tOpFin = Math.max(0, tPlanFin - tParFin);
+  const dispIni = tPlanIni > 0 ? tOpIni / tPlanIni : 0;
+  const dispFin = tPlanFin > 0 ? tOpFin / tPlanFin : 0;
+
+  document.getElementById('disp_top_ini').value = tOpIni + ' min';
+  document.getElementById('disp_top_fin').value = tOpFin + ' min';
+  document.getElementById('disp_ini').value = pct(dispIni);
+  document.getElementById('disp_fin').value = pct(dispFin);
+
+  const desmIni = n('desm_cap_ini') > 0 ? n('desm_real_ini') / n('desm_cap_ini') : 0;
+  const desmFin = n('desm_cap_fin') > 0 ? n('desm_real_fin') / n('desm_cap_fin') : 0;
+  document.getElementById('desm_ini').value = pct(desmIni);
+  document.getElementById('desm_fin').value = pct(desmFin);
+
+  const qualIni = n('qual_tot_ini') > 0 ? n('qual_boas_ini') / n('qual_tot_ini') : 0;
+  const qualFin = n('qual_tot_fin') > 0 ? n('qual_boas_fin') / n('qual_tot_fin') : 0;
+  document.getElementById('qual_ini').value = pct(qualIni);
+  document.getElementById('qual_fin').value = pct(qualFin);
+
+  const oeeIni = dispIni * desmIni * qualIni;
+  const oeeFin = dispFin * desmFin * qualFin;
+
+  document.getElementById('r_disp_ini').textContent = pct(dispIni);
+  document.getElementById('r_disp_fin').textContent = pct(dispFin);
+  document.getElementById('r_desm_ini').textContent = pct(desmIni);
+  document.getElementById('r_desm_fin').textContent = pct(desmFin);
+  document.getElementById('r_qual_ini').textContent = pct(qualIni);
+  document.getElementById('r_qual_fin').textContent = pct(qualFin);
+  document.getElementById('r_oee_ini').textContent = pct(oeeIni);
+  document.getElementById('r_oee_fin').textContent = pct(oeeFin);
+
+  const box = document.getElementById('resultado-oee');
+  if (oeeIni > 0 && oeeFin > 0) {
+    const var_ = ((oeeFin - oeeIni) / oeeIni) * 100;
+    const ok = var_ >= 10;
+    box.className = 'resultado-box ' + (ok ? 'ok' : 'fail');
+    box.style.display = 'flex';
+    box.innerHTML = `
+      <div><div class="rb-label">Variação de OEE</div>
+      <div class="rb-meta">Inicial: ${pct(oeeIni)} → Final: ${pct(oeeFin)}</div></div>
+      <div class="rb-valor">${var_ >= 0 ? '▲' : '▼'} ${Math.abs(var_).toFixed(1)}%</div>
+      <div>${ok ? '✅ Meta FINEP atingida (≥ 10%)' : '❌ Meta FINEP não atingida (< 10%)'}</div>`;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// COLETA / RESTAURA DADOS
+// ═══════════════════════════════════════════════════════════
+const CAMPOS_TEXTO = [
+  'nome_empresa','cnpj','segmento','responsavel','cargo','email',
+  'num_colaboradores','num_maquinas','equipamento','turno',
+  'prod_ini_de','prod_ini_ate','prod_ini_qtd','prod_ini_horas',
+  'prod_fin_de','prod_fin_ate','prod_fin_qtd','prod_fin_horas',
+  'disp_tplan_ini','disp_tpar_ini','disp_tplan_fin','disp_tpar_fin',
+  'desm_cap_ini','desm_real_ini','desm_cap_fin','desm_real_fin',
+  'qual_tot_ini','qual_boas_ini','qual_tot_fin','qual_boas_fin',
+  'atendeu','recomenda','continuar','signatario','cpf_sign','data_preenchi','obs_finais',
+  'impacto_geral',
+  ...CRITERIOS_AVAL.map((_,i) => `aval_${i}`)
+];
+
+function coletarDados() {
+  const d = {};
+  CAMPOS_TEXTO.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) d[id] = el.value;
+  });
+  // Checkboxes - processos
+  d.processos = [];
+  document.querySelectorAll('#processos input:checked').forEach(cb => d.processos.push(cb.value));
+  // Radio - controle_antes
+  const ca = document.querySelector('input[name="controle_antes"]:checked');
+  d.controle_antes = ca ? ca.value : '';
+  // Radio - uso_semos
+  const us = document.querySelector('input[name="uso_semos"]:checked');
+  d.uso_semos = us ? us.value : '';
+  // Radio - unidade_prod
+  const up = document.querySelector('input[name="unidade_prod"]:checked');
+  d.unidade_prod = up ? up.value : '';
+  // Checkboxes - beneficios
+  d.beneficios = [];
+  document.querySelectorAll('#beneficios input:checked').forEach(cb => d.beneficios.push(cb.value));
+  return d;
+}
+
+function restaurarDados(d) {
+  if (!d) return;
+  CAMPOS_TEXTO.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && d[id] !== undefined) el.value = d[id];
+  });
+  // Checkboxes - processos
+  document.querySelectorAll('#processos input').forEach(cb => {
+    cb.checked = (d.processos || []).includes(cb.value);
+    cb.closest('.opcao').classList.toggle('selecionada', cb.checked);
+  });
+  // Radios
+  ['controle_antes','uso_semos','unidade_prod'].forEach(name => {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+      r.checked = r.value === d[name];
+      r.closest('.opcao').classList.toggle('selecionada', r.checked);
+    });
+  });
+  // Checkboxes - beneficios
+  document.querySelectorAll('#beneficios input').forEach(cb => {
+    cb.checked = (d.beneficios || []).includes(cb.value);
+    cb.closest('.opcao').classList.toggle('selecionada', cb.checked);
+  });
+  // Escalas
+  restaurarEscala('impacto_geral', d.impacto_geral);
+  CRITERIOS_AVAL.forEach((_,i) => restaurarEscala(`aval_${i}`, d[`aval_${i}`]));
+  // Recalcula
+  calcProdutividade();
+  calcOEE();
+  atualizarProgresso();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════
+function carregarTodos() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    dados = raw ? JSON.parse(raw) : {};
+  } catch(e) { dados = {}; }
+}
+
+function salvarTodos() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+    atualizarInfoSalvo();
+  } catch(e) { mostrarToast('Erro ao salvar! localStorage indisponível.', 'erro'); }
+}
+
+function carregarEmpresa() {
+  empresaAtual = parseInt(document.getElementById('select-empresa').value) || 1;
+  const d = dados[empresaAtual] || {};
+  // Zera campos numéricos
+  ['prod_ini_qtd','prod_ini_horas','prod_fin_qtd','prod_fin_horas',
+   'disp_tplan_ini','disp_tpar_ini','disp_tplan_fin','disp_tpar_fin',
+   'desm_cap_ini','desm_real_ini','desm_cap_fin','desm_real_fin',
+   'qual_tot_ini','qual_boas_ini','qual_tot_fin','qual_boas_fin']
+    .forEach(id => { const el = document.getElementById(id); if(el && !d[id]) el.value = 0; });
+  restaurarDados(d);
+  atualizarBadgeEmpresa();
+  // Atualiza nome no select
+  atualizarNomeSelect();
+}
+
+function salvarAuto() {
+  dados[empresaAtual] = coletarDados();
+  salvarTodos();
+  atualizarProgresso();
+  atualizarBadgeEmpresa();
+  atualizarNomeSelect();
+}
+
+function salvarManual() {
+  salvarAuto();
+  mostrarToast('✅ Dados salvos com sucesso!', 'ok');
+}
+
+function atualizarNomeSelect() {
+  const sel = document.getElementById('select-empresa');
+  const opt = sel.querySelector(`option[value="${empresaAtual}"]`);
+  if (!opt) return;
+  const nome = dados[empresaAtual]?.nome_empresa;
+  opt.textContent = nome ? `Empresa ${empresaAtual} – ${nome.substring(0,22)}` : `Empresa ${empresaAtual}`;
+}
+
+function atualizarInfoSalvo() {
+  document.getElementById('info-salvo').textContent = 'Salvo: ' + new Date().toLocaleTimeString('pt-BR');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROGRESSO
+// ═══════════════════════════════════════════════════════════
+function atualizarProgresso() {
+  const d = dados[empresaAtual] || {};
+  const obrig = ['nome_empresa','cnpj','segmento','responsavel','equipamento','prod_ini_qtd','prod_ini_horas','prod_fin_qtd','prod_fin_horas','atendeu','signatario'];
+  const preench = obrig.filter(k => d[k] && String(d[k]).trim() !== '' && d[k] !== '0').length;
+  const pct = Math.round((preench / obrig.length) * 100);
+  document.getElementById('barra-progresso').style.width = pct + '%';
+  document.getElementById('txt-progresso').textContent = pct + '%';
+}
+
+// ═══════════════════════════════════════════════════════════
+// BADGE STATUS
+// ═══════════════════════════════════════════════════════════
+function calcStatus(d) {
+  if (!d || !d.nome_empresa) return 'pend';
+  const pIni = d.prod_ini_horas > 0 ? d.prod_ini_qtd / d.prod_ini_horas : 0;
+  const pFin = d.prod_fin_horas > 0 ? d.prod_fin_qtd / d.prod_fin_horas : 0;
+  const varP = pIni > 0 ? ((pFin - pIni) / pIni) * 100 : 0;
+  const tPlanI = parseFloat(d.disp_tplan_ini)||0, tParI = parseFloat(d.disp_tpar_ini)||0;
+  const tPlanF = parseFloat(d.disp_tplan_fin)||0, tParF = parseFloat(d.disp_tpar_fin)||0;
+  const dI = tPlanI>0?(tPlanI-tParI)/tPlanI:0, dF = tPlanF>0?(tPlanF-tParF)/tPlanF:0;
+  const dmI = (d.desm_cap_ini>0?d.desm_real_ini/d.desm_cap_ini:0);
+  const dmF = (d.desm_cap_fin>0?d.desm_real_fin/d.desm_cap_fin:0);
+  const qI = (d.qual_tot_ini>0?d.qual_boas_ini/d.qual_tot_ini:0);
+  const qF = (d.qual_tot_fin>0?d.qual_boas_fin/d.qual_tot_fin:0);
+  const oeeI = dI*dmI*qI, oeeF = dF*dmF*qF;
+  const varO = oeeI > 0 ? ((oeeF-oeeI)/oeeI)*100 : 0;
+  if (pIni > 0 && oeeI > 0) return (varP >= 20 && varO >= 10) ? 'ok' : 'fail';
+  return 'pend';
+}
+
+function atualizarBadgeEmpresa() {
+  const st = calcStatus(dados[empresaAtual]);
+  const badge = document.getElementById('badge-status-empresa');
+  const map = { ok: ['badge-ok','✅ Metas atingidas'], fail: ['badge-fail','❌ Metas não atingidas'], pend: ['badge-pend','⏳ Em preenchimento'] };
+  badge.innerHTML = `<span class="badge ${map[st][0]}">${map[st][1]}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAINEL
+// ═══════════════════════════════════════════════════════════
+function atualizarPainel() {
+  const preench = Object.keys(dados).filter(k => dados[k]?.nome_empresa).length;
+  const ok = Object.keys(dados).filter(k => calcStatus(dados[k]) === 'ok').length;
+  const fail = Object.keys(dados).filter(k => calcStatus(dados[k]) === 'fail').length;
+  const pend = preench - ok - fail;
+
+  document.getElementById('dash-cards').innerHTML = `
+    <div class="dash-card"><div class="dash-num">${preench}</div><div class="dash-label">Empresas preenchidas</div></div>
+    <div class="dash-card"><div class="dash-num" style="color:#375623">${ok}</div><div class="dash-label">✅ Ambas metas atingidas</div></div>
+    <div class="dash-card"><div class="dash-num" style="color:var(--vermelho)">${fail}</div><div class="dash-label">❌ Metas não atingidas</div></div>
+    <div class="dash-card"><div class="dash-num" style="color:#7B6000">${pend}</div><div class="dash-label">⏳ Parcial / pendente</div></div>
+    <div class="dash-card"><div class="dash-num">${NUM_EMPRESAS - preench}</div><div class="dash-label">Empresas sem dados</div></div>`;
+
+  const lista = document.getElementById('lista-empresas-painel');
+  lista.innerHTML = '';
+  for (let i = 1; i <= NUM_EMPRESAS; i++) {
+    const d = dados[i] || {};
+    const st = calcStatus(d);
+    const nome = d.nome_empresa || `Empresa ${i} — sem dados`;
+    const seg = d.segmento || '—';
+    const pIni = d.prod_ini_horas > 0 ? (d.prod_ini_qtd / d.prod_ini_horas).toFixed(1) : '—';
+    const pFin = d.prod_fin_horas > 0 ? (d.prod_fin_qtd / d.prod_fin_horas).toFixed(1) : '—';
+    const stMap = { ok: ['ok','✅ Metas OK','badge-ok'], fail: ['fail','❌ Não atingiu','badge-fail'], pend: ['pend','⏳ Pendente','badge-pend'] };
+    lista.innerHTML += `
+      <div class="empresa-item ${stMap[st][0]}" onclick="irParaEmpresa(${i})">
+        <div>
+          <div class="ei-nome">Empresa ${i} — ${nome}</div>
+          <div class="ei-info">${seg} &nbsp;|&nbsp; Produt.: ${pIni} → ${pFin} unid/h</div>
+        </div>
+        <div class="ei-badges">
+          <span class="badge ${stMap[st][2]}">${stMap[st][1]}</span>
+        </div>
+      </div>`;
+  }
+}
+
+function irParaEmpresa(num) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('ativo'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('ativo'));
+  document.getElementById('view-formulario').classList.add('ativo');
+  document.querySelectorAll('.nav-tab')[0].classList.add('ativo');
+  document.getElementById('select-empresa').value = num;
+  carregarEmpresa();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL / LIMPAR
+// ═══════════════════════════════════════════════════════════
+function abrirModal() { document.getElementById('modal-limpar').classList.add('aberto'); }
+function fecharModal() { document.getElementById('modal-limpar').classList.remove('aberto'); }
+function confirmarLimpar() {
+  delete dados[empresaAtual];
+  salvarTodos();
+  fecharModal();
+  carregarEmpresa();
+  mostrarToast('Dados da empresa limpos.', '');
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+function mostrarToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (tipo || '');
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BACKUP JSON
+// ═══════════════════════════════════════════════════════════
+function exportarBackupJSON() {
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'SEMOS_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  mostrarToast('Backup exportado!', 'ok');
+}
+
+function importarJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      dados = JSON.parse(e.target.result);
+      salvarTodos();
+      carregarEmpresa();
+      // Atualiza todos os nomes no select
+      for (let i = 1; i <= NUM_EMPRESAS; i++) {
+        empresaAtual = i;
+        atualizarNomeSelect();
+      }
+      empresaAtual = parseInt(document.getElementById('select-empresa').value) || 1;
+      mostrarToast('✅ Backup importado com sucesso!', 'ok');
+    } catch(err) { mostrarToast('Erro ao importar JSON.', 'erro'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// MÁSCARAS
+// ═══════════════════════════════════════════════════════════
+function mascaraCNPJ(el) {
+  let v = el.value.replace(/\D/g,'').substring(0,14);
+  v = v.replace(/^(\d{2})(\d)/,'$1.$2')
+       .replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+       .replace(/\.(\d{3})(\d)/,'.$1/$2')
+       .replace(/(\d{4})(\d)/,'$1-$2');
+  el.value = v;
+}
+
+function mascaraCPF(el) {
+  let v = el.value.replace(/\D/g,'').substring(0,11);
+  v = v.replace(/(\d{3})(\d)/,'$1.$2')
+       .replace(/(\d{3})\.(\d{3})(\d)/,'$1.$2.$3')
+       .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/,'$1.$2.$3-$4');
+  el.value = v;
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORTAR EXCEL FINEP
+// ═══════════════════════════════════════════════════════════
+function exportarExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // ── Aba 1: RESULTADOS DOS INDICADORES (igual ao modelo FINEP) ──
+  const wsData = [];
+
+  // Cabeçalho
+  wsData.push(['RESULTADOS DOS INDICADORES SMART FACTORY']);
+  wsData.push([]);
+
+  // Informações do Projeto
+  wsData.push(['Informações do Projeto Smart Factory']);
+  wsData.push(['Informação', 'Resposta']);
+  wsData.push(['Título do Projeto', 'SEMOS – Sistema Embarcado Modular para Operações de Soldagem']);
+  wsData.push(['N° do Projeto (SGF)', '']);
+  wsData.push(['Departamento Regional', '']);
+  wsData.push(['Empresa Parceira (Razão Social)', 'INOTEC – Inovação e Tecnologia']);
+  wsData.push([]);
+
+  // Calcula médias apenas de empresas com dados
+  const empresasComDados = [];
+  for (let i = 1; i <= NUM_EMPRESAS; i++) {
+    const d = dados[i];
+    if (!d || !d.nome_empresa) continue;
+    const pIni = d.prod_ini_horas > 0 ? d.prod_ini_qtd / d.prod_ini_horas : 0;
+    const pFin = d.prod_fin_horas > 0 ? d.prod_fin_qtd / d.prod_fin_horas : 0;
+    const varP = pIni > 0 ? ((pFin - pIni) / pIni) * 100 : null;
+    const tPI = parseFloat(d.disp_tplan_ini)||0, tParI = parseFloat(d.disp_tpar_ini)||0;
+    const tPF = parseFloat(d.disp_tplan_fin)||0, tParF = parseFloat(d.disp_tpar_fin)||0;
+    const dI = tPI > 0 ? (tPI-tParI)/tPI : 0;
+    const dF = tPF > 0 ? (tPF-tParF)/tPF : 0;
+    const dmI = d.desm_cap_ini > 0 ? d.desm_real_ini/d.desm_cap_ini : 0;
+    const dmF = d.desm_cap_fin > 0 ? d.desm_real_fin/d.desm_cap_fin : 0;
+    const qI  = d.qual_tot_ini > 0 ? d.qual_boas_ini/d.qual_tot_ini : 0;
+    const qF  = d.qual_tot_fin > 0 ? d.qual_boas_fin/d.qual_tot_fin : 0;
+    const oeeI = dI*dmI*qI*100, oeeF = dF*dmF*qF*100;
+    const varO = oeeI > 0 ? ((oeeF - oeeI) / oeeI) * 100 : null;
+    empresasComDados.push({ i, d, varP, oeeI, oeeF, varO, pIni, pFin });
+  }
+
+  const mediaProd = empresasComDados.filter(e => e.varP !== null).length > 0
+    ? empresasComDados.filter(e => e.varP !== null).reduce((s,e) => s + e.varP, 0) / empresasComDados.filter(e => e.varP !== null).length
+    : 0;
+  const mediaOEE = empresasComDados.filter(e => e.varO !== null).length > 0
+    ? empresasComDados.filter(e => e.varO !== null).reduce((s,e) => s + e.varO, 0) / empresasComDados.filter(e => e.varO !== null).length
+    : 0;
+
+  // Tabela de Resultados
+  wsData.push(['Tabela de Resultados de Indicadores']);
+  wsData.push(['Indicador', 'Resultado', 'Unidade']);
+  wsData.push(['Ganho Médio de Produtividade', parseFloat(mediaProd.toFixed(2)), '%']);
+  wsData.push(['Ganho Médio de OEE', parseFloat(mediaOEE.toFixed(2)), '%']);
+  wsData.push(['Número de Empresas Validadoras aprovadas para o projeto', empresasComDados.length, '']);
+  wsData.push([]);
+
+  // CNPJs
+  wsData.push(['CNPJs das Empresas Validadoras em que a solução foi validada']);
+  wsData.push(['Validadora N°', 'CNPJ']);
+  for (let i = 1; i <= 40; i++) {
+    const d = dados[i];
+    wsData.push([i, d?.cnpj || '']);
+  }
+
+  const ws1 = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Larguras de coluna
+  ws1['!cols'] = [{ wch: 50 }, { wch: 30 }, { wch: 12 }];
+
+  // Merge título
+  ws1['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 2 } },
+    { s: { r: 9, c: 0 }, e: { r: 9, c: 2 } },
+    { s: { r: 15, c: 0 }, e: { r: 15, c: 2 } },
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws1, 'RESULTADOS INDICADORES');
+
+  // ── Aba 2: DADOS COMPLETOS ──
+  const header2 = [
+    'Nº','Nome da Empresa','CNPJ','Segmento','Responsável','Cargo',
+    'Produt. Inicial (unid/h)','Produt. Final (unid/h)','Variação Produt. (%)','Meta Produt. ≥20%',
+    'Disp. Inicial (%)','Disp. Final (%)',
+    'Desempenho Inicial (%)','Desempenho Final (%)',
+    'Qualidade Inicial (%)','Qualidade Final (%)',
+    'OEE Inicial (%)','OEE Final (%)','Variação OEE (%)','Meta OEE ≥10%',
+    'Atendeu Expectativas','Recomenda','Status FINEP'
+  ];
+
+  const rows2 = [header2];
+  for (let i = 1; i <= NUM_EMPRESAS; i++) {
+    const d = dados[i] || {};
+    const e = empresasComDados.find(x => x.i === i) || {};
+    const tPI = parseFloat(d.disp_tplan_ini)||0, tParI = parseFloat(d.disp_tpar_ini)||0;
+    const tPF = parseFloat(d.disp_tplan_fin)||0, tParF = parseFloat(d.disp_tpar_fin)||0;
+    const dI = tPI > 0 ? ((tPI-tParI)/tPI*100).toFixed(1) : '';
+    const dF = tPF > 0 ? ((tPF-tParF)/tPF*100).toFixed(1) : '';
+    const dmI = d.desm_cap_ini > 0 ? (d.desm_real_ini/d.desm_cap_ini*100).toFixed(1) : '';
+    const dmF = d.desm_cap_fin > 0 ? (d.desm_real_fin/d.desm_cap_fin*100).toFixed(1) : '';
+    const qI  = d.qual_tot_ini > 0 ? (d.qual_boas_ini/d.qual_tot_ini*100).toFixed(1) : '';
+    const qF  = d.qual_tot_fin > 0 ? (d.qual_boas_fin/d.qual_tot_fin*100).toFixed(1) : '';
+    const status = calcStatus(d);
+    const statusLabel = status === 'ok' ? 'Ambas atingidas' : status === 'fail' ? 'Não atingidas' : 'Pendente';
+    rows2.push([
+      i, d.nome_empresa||'', d.cnpj||'', d.segmento||'', d.responsavel||'', d.cargo||'',
+      e.pIni ? parseFloat(e.pIni.toFixed(2)) : '',
+      e.pFin ? parseFloat(e.pFin.toFixed(2)) : '',
+      e.varP  !== undefined ? parseFloat(e.varP.toFixed(2))  : '',
+      e.varP  !== undefined ? (e.varP  >= 20 ? 'SIM' : 'NÃO') : '',
+      dI, dF, dmI, dmF, qI, qF,
+      e.oeeI  ? parseFloat(e.oeeI.toFixed(2))  : '',
+      e.oeeF  ? parseFloat(e.oeeF.toFixed(2))  : '',
+      e.varO  !== undefined ? parseFloat(e.varO.toFixed(2))  : '',
+      e.varO  !== undefined ? (e.varO  >= 10 ? 'SIM' : 'NÃO') : '',
+      d.atendeu||'', d.recomenda||'', statusLabel
+    ]);
+  }
+
+  const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+  ws2['!cols'] = header2.map(() => ({ wch: 20 }));
+  ws2['!cols'][1] = { wch: 32 };
+  XLSX.utils.book_append_sheet(wb, ws2, 'DADOS COMPLETOS');
+
+  // Exporta
+  XLSX.writeFile(wb, 'SEMOS_Resultados_FINEP_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  mostrarToast('✅ Excel exportado com sucesso!', 'ok');
+}
+
+// Marcação de opções ao clicar
+document.addEventListener('change', e => {
+  if (e.target.type === 'checkbox' || e.target.type === 'radio') {
+    const opcao = e.target.closest('.opcao');
+    if (!opcao) return;
+    if (e.target.type === 'radio') {
+      document.querySelectorAll(`input[name="${e.target.name}"]`).forEach(r => {
+        r.closest('.opcao')?.classList.remove('selecionada');
+      });
+    }
+    opcao.classList.toggle('selecionada', e.target.checked);
+  }
+});
+
+
+</script>
+</body>
+</html>
