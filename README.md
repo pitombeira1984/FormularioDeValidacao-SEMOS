@@ -27,7 +27,7 @@ Sem configurar o Supabase (veja abaixo), o formulário funciona normalmente, mas
 - **Barra de progresso** — indica o percentual de preenchimento dos campos obrigatórios da empresa selecionada.
 - **Painel Geral** — visão consolidada de todas as empresas, com contadores (preenchidas, metas atingidas, não atingidas, pendentes, sem dados) e lista navegável para cada empresa.
 - **Persistência em banco de dados (Supabase)** — os dados de cada empresa são sincronizados com um banco Postgres compartilhado (via [Supabase](https://supabase.com)), permitindo que as 36 empresas preencham o formulário em máquinas diferentes e o Painel Geral mostre a visão consolidada real. Cada alteração é salva instantaneamente no `localStorage` (chave `semos_validacao_v1`, também usado como cache offline) e sincronizada com o servidor após um pequeno debounce.
-- **Código de acesso por empresa** — para evitar que uma empresa sobrescreva por engano os dados de outra, cada empresa possui um código de acesso (definido no banco) solicitado na primeira gravação da sessão. Não é um sistema de login completo — a leitura dos dados (usada pelo Painel Geral) continua aberta.
+- **Código de acesso por empresa** — para evitar que uma empresa sobrescreva por engano os dados de outra, cada empresa possui um código de acesso (definido no banco) solicitado na primeira gravação da sessão. Não é um sistema de login completo — a leitura dos dados (usada pelo Painel Geral) continua aberta, mas apenas através de uma view (`respostas_publicas`) que não expõe os códigos de acesso, evitando que sejam lidos pela API pública.
 - **Backup / Restauração** — exportação e importação dos dados em arquivo JSON, útil para fazer backup local ou recuperar o preenchimento se o navegador ficar sem acesso ao banco.
 - **Exportação para Excel (FINEP)** — gera uma planilha `.xlsx` (via [SheetJS](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)) com duas abas:
   - `RESULTADOS INDICADORES`: resumo no formato exigido pela FINEP (ganho médio de produtividade, ganho médio de OEE, CNPJs das empresas validadoras).
@@ -37,7 +37,7 @@ Sem configurar o Supabase (veja abaixo), o formulário funciona normalmente, mas
 
 ```
 index.html          # Aplicação completa (HTML + CSS + JavaScript), sem build
-supabase/schema.sql  # Script de setup do banco (tabela, RLS, função de gravação, seed dos códigos de acesso)
+supabase/schema.sql  # Script de setup do banco (tabela, RLS, view pública, função de gravação, seed dos códigos de acesso)
 README.md
 ```
 
@@ -51,9 +51,13 @@ README.md
 ## Configuração do banco de dados (Supabase)
 
 1. Criar um projeto gratuito em [supabase.com](https://supabase.com).
-2. No **SQL Editor** do projeto, rodar o script `supabase/schema.sql` — ele cria a tabela `respostas`, as políticas de RLS, a função `salvar_empresa` (que valida o código de acesso antes de gravar) e já popula as 36 empresas com códigos de acesso iniciais (`SEMOS01`...`SEMOS36`).
-3. Em **Project Settings → API**, copiar a **Project URL** e a chave **anon public**.
-4. No `index.html`, preencher as constantes `SUPABASE_URL` e `SUPABASE_ANON_KEY` (próximo a `STORAGE_KEY`) com esses valores. A chave anon é pública por design do Supabase — a proteção real está nas políticas de RLS e na função de gravação criadas pelo script.
+2. No **SQL Editor** do projeto, rodar o script `supabase/schema.sql` — ele cria a tabela `respostas`, a RLS, a view pública `respostas_publicas` (usada para leitura, sem expor os códigos de acesso), a função `salvar_empresa` (que valida o código de acesso antes de gravar) e já popula as 36 empresas com códigos de acesso iniciais (`SEMOS01`...`SEMOS36`).
+3. Em **Project Settings → API Keys**, copiar a **Project URL** e a chave pública do cliente:
+   - Projetos novos: a **Publishable key** (`sb_publishable_...`).
+   - Projetos no esquema legado: a chave **anon public** (formato JWT).
+
+   ⚠️ **Nunca** use a **Secret key** (`sb_secret_...`) ou a `service_role` no `index.html` — essas chaves ignoram a RLS e dão acesso total de leitura/escrita ao banco a quem abrir o arquivo.
+4. No `index.html`, preencher as constantes `SUPABASE_URL` e `SUPABASE_ANON_KEY` (próximo a `STORAGE_KEY`) com esses valores. A chave publicável/anon é pública por design do Supabase — a proteção real está na RLS, na view de leitura e na função de gravação criadas pelo script.
 5. Trocar os códigos de acesso padrão (`SEMOS01`...`SEMOS36`) por códigos próprios antes de distribuir o link/arquivo às empresas validadoras, e comunicar o código de cada uma individualmente.
 
 Sem esses passos, o app detecta a ausência de configuração e continua funcionando apenas com `localStorage`, como antes.
