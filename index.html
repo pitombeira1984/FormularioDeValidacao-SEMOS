@@ -1335,7 +1335,7 @@ async function carregarTodos() {
   if (!supa) return; // Supabase não configurado: opera só localmente
 
   try {
-    const { data, error } = await supa.from('respostas').select('empresa_id, dados');
+    const { data, error } = await supa.from('respostas_publicas').select('empresa_id, dados');
     if (error) throw error;
     data.forEach(row => { dados[row.empresa_id] = row.dados || {}; });
     salvarLocal();
