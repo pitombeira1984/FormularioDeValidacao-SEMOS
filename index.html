@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SEMOS – Validação FINEP | INOTEC</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --azul:        #1F4E79;
@@ -499,6 +500,22 @@
     <div class="modal-acoes">
       <button class="btn btn-neutro" onclick="fecharModal()">Cancelar</button>
       <button class="btn btn-perigo" onclick="confirmarLimpar()">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CÓDIGO DE ACESSO -->
+<div class="modal-overlay" id="modal-codigo">
+  <div class="modal">
+    <h3>🔒 Código de acesso</h3>
+    <p id="modal-codigo-texto">Informe o código de acesso desta empresa para salvar os dados no servidor.</p>
+    <div class="campo" style="margin-bottom:16px;">
+      <input type="text" id="input-codigo-acesso" placeholder="Ex: SEMOS01" autocomplete="off"
+             onkeydown="if(event.key==='Enter')confirmarCodigoAcesso()">
+    </div>
+    <div class="modal-acoes">
+      <button class="btn btn-neutro" onclick="cancelarCodigoAcesso()">Cancelar</button>
+      <button class="btn btn-primario" onclick="confirmarCodigoAcesso()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -1042,6 +1059,15 @@
 const STORAGE_KEY = 'semos_validacao_v1';
 const NUM_EMPRESAS = 36;
 
+// Chave pública (anon) do Supabase — segura para expor no cliente,
+// a proteção real está nas policies/RLS configuradas no banco.
+// Preencher com os dados do projeto criado em supabase.com.
+const SUPABASE_URL = 'https://SEU-PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA-CHAVE-ANON-PUBLICA';
+const supa = (SUPABASE_URL.includes('SEU-PROJETO'))
+  ? null
+  : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const CRITERIOS_AVAL = [
   'Facilidade de instalação e configuração',
   'Qualidade dos dados em tempo real',
@@ -1061,14 +1087,14 @@ let dados = {};
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   gerarSecaoAvaliacao();
   gerarSelectEmpresas();
-  carregarTodos();
+  await carregarTodos();
   empresaAtual = 1;
   document.getElementById('select-empresa').value = '1';
   carregarEmpresa();
-  atualizarInfoSalvo();
+  atualizarInfoSalvo('ok');
 });
 
 function gerarSelectEmpresas() {
@@ -1298,18 +1324,96 @@ function restaurarDados(d) {
 // ═══════════════════════════════════════════════════════════
 // STORAGE
 // ═══════════════════════════════════════════════════════════
-function carregarTodos() {
+async function carregarTodos() {
+  // Cache local primeiro — garante que o app nunca abre vazio,
+  // mesmo sem conexão com o Supabase.
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     dados = raw ? JSON.parse(raw) : {};
   } catch(e) { dados = {}; }
+
+  if (!supa) return; // Supabase não configurado: opera só localmente
+
+  try {
+    const { data, error } = await supa.from('respostas').select('empresa_id, dados');
+    if (error) throw error;
+    data.forEach(row => { dados[row.empresa_id] = row.dados || {}; });
+    salvarLocal();
+  } catch(e) {
+    mostrarToast('Sem conexão com o servidor — usando dados salvos localmente.', 'erro');
+  }
 }
 
-function salvarTodos() {
+function salvarLocal() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-    atualizarInfoSalvo();
-  } catch(e) { mostrarToast('Erro ao salvar! localStorage indisponível.', 'erro'); }
+  } catch(e) { mostrarToast('Erro ao salvar localmente!', 'erro'); }
+}
+
+// Debounce da sincronização com o servidor por empresa, para não
+// disparar uma requisição a cada tecla digitada.
+const timersSync = {};
+function agendarSincronizacao(empresaId) {
+  if (!supa) return;
+  clearTimeout(timersSync[empresaId]);
+  timersSync[empresaId] = setTimeout(() => sincronizarEmpresa(empresaId), 800);
+}
+
+async function sincronizarEmpresa(empresaId) {
+  const codigo = await obterCodigoAcesso(empresaId);
+  if (!codigo) return; // usuário cancelou o modal de código
+
+  try {
+    const { error } = await supa.rpc('salvar_empresa', {
+      p_empresa_id: empresaId,
+      p_codigo: codigo,
+      p_dados: dados[empresaId]
+    });
+    if (error) {
+      if (error.message && error.message.includes('codigo_invalido')) {
+        sessionStorage.removeItem('codigo_empresa_' + empresaId);
+        mostrarToast(`❌ Código de acesso inválido para a Empresa ${empresaId}.`, 'erro');
+        if (empresaId === empresaAtual) atualizarInfoSalvo('erro_codigo');
+        return;
+      }
+      throw error;
+    }
+    if (empresaId === empresaAtual) atualizarInfoSalvo('ok');
+  } catch(e) {
+    if (empresaId === empresaAtual) atualizarInfoSalvo('offline');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL CÓDIGO DE ACESSO
+// ═══════════════════════════════════════════════════════════
+let resolverCodigoModal = null;
+
+function obterCodigoAcesso(empresaId) {
+  const cache = sessionStorage.getItem('codigo_empresa_' + empresaId);
+  if (cache) return Promise.resolve(cache);
+  return new Promise(resolve => {
+    resolverCodigoModal = resolve;
+    document.getElementById('modal-codigo-texto').textContent =
+      `Informe o código de acesso da Empresa ${empresaId} para salvar os dados no servidor.`;
+    document.getElementById('input-codigo-acesso').value = '';
+    document.getElementById('modal-codigo').dataset.empresaId = empresaId;
+    document.getElementById('modal-codigo').classList.add('aberto');
+    document.getElementById('input-codigo-acesso').focus();
+  });
+}
+
+function confirmarCodigoAcesso() {
+  const empresaId = document.getElementById('modal-codigo').dataset.empresaId;
+  const codigo = document.getElementById('input-codigo-acesso').value.trim();
+  document.getElementById('modal-codigo').classList.remove('aberto');
+  if (codigo) sessionStorage.setItem('codigo_empresa_' + empresaId, codigo);
+  if (resolverCodigoModal) { resolverCodigoModal(codigo || null); resolverCodigoModal = null; }
+}
+
+function cancelarCodigoAcesso() {
+  document.getElementById('modal-codigo').classList.remove('aberto');
+  if (resolverCodigoModal) { resolverCodigoModal(null); resolverCodigoModal = null; }
 }
 
 function carregarEmpresa() {
@@ -1329,7 +1433,9 @@ function carregarEmpresa() {
 
 function salvarAuto() {
   dados[empresaAtual] = coletarDados();
-  salvarTodos();
+  salvarLocal();
+  atualizarInfoSalvo('local');
+  agendarSincronizacao(empresaAtual);
   atualizarProgresso();
   atualizarBadgeEmpresa();
   atualizarNomeSelect();
@@ -1348,8 +1454,17 @@ function atualizarNomeSelect() {
   opt.textContent = nome ? `Empresa ${empresaAtual} – ${nome.substring(0,22)}` : `Empresa ${empresaAtual}`;
 }
 
-function atualizarInfoSalvo() {
-  document.getElementById('info-salvo').textContent = 'Salvo: ' + new Date().toLocaleTimeString('pt-BR');
+function atualizarInfoSalvo(status) {
+  const hora = new Date().toLocaleTimeString('pt-BR');
+  const el = document.getElementById('info-salvo');
+  if (!supa) { el.textContent = 'Salvo localmente: ' + hora; return; }
+  const textos = {
+    ok:          '✅ Sincronizado: ' + hora,
+    local:       'Salvando… ' + hora,
+    offline:     '⚠️ Salvo localmente (sem conexão): ' + hora,
+    erro_codigo: '❌ Código de acesso inválido — dados só salvos localmente'
+  };
+  el.textContent = textos[status] || textos.local;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1446,8 +1561,9 @@ function irParaEmpresa(num) {
 function abrirModal() { document.getElementById('modal-limpar').classList.add('aberto'); }
 function fecharModal() { document.getElementById('modal-limpar').classList.remove('aberto'); }
 function confirmarLimpar() {
-  delete dados[empresaAtual];
-  salvarTodos();
+  dados[empresaAtual] = {};
+  salvarLocal();
+  agendarSincronizacao(empresaAtual);
   fecharModal();
   carregarEmpresa();
   mostrarToast('Dados da empresa limpos.', '');
@@ -1482,7 +1598,7 @@ function importarJSON(event) {
   reader.onload = e => {
     try {
       dados = JSON.parse(e.target.result);
-      salvarTodos();
+      salvarLocal();
       carregarEmpresa();
       // Atualiza todos os nomes no select
       for (let i = 1; i <= NUM_EMPRESAS; i++) {
