@@ -159,6 +159,11 @@
   }
   .campo textarea { resize: vertical; min-height: 72px; }
   .campo .hint { font-size: 11px; color: var(--texto-leve); }
+  .campo .hint.erro { color: var(--vermelho); font-weight: 600; }
+  .campo input.invalido {
+    border-color: var(--vermelho);
+    box-shadow: 0 0 0 3px rgba(192,0,0,.12);
+  }
 
   /* ── RADIO / CHECKBOX ── */
   .opcoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
@@ -584,6 +589,11 @@
           <div class="campo">
             <label>Responsável <span class="req">*</span></label>
             <input type="text" id="responsavel" placeholder="Nome completo" oninput="salvarAuto()">
+          </div>
+          <div class="campo">
+            <label>CPF do Responsável <span class="req">*</span></label>
+            <input type="text" id="cpf_responsavel" placeholder="XXX.XXX.XXX-XX" inputmode="numeric" maxlength="14" oninput="mascaraCPF(this);validarCampoCPF(this);salvarAuto()" onblur="validarCampoCPF(this)">
+            <div class="hint" id="cpf_responsavel_hint"></div>
           </div>
           <div class="campo">
             <label>Cargo <span class="req">*</span></label>
@@ -1253,7 +1263,7 @@ function calcOEE() {
 // COLETA / RESTAURA DADOS
 // ═══════════════════════════════════════════════════════════
 const CAMPOS_TEXTO = [
-  'nome_empresa','cnpj','segmento','responsavel','cargo','email',
+  'nome_empresa','cnpj','segmento','responsavel','cpf_responsavel','cargo','email',
   'num_colaboradores','num_maquinas','equipamento','turno',
   'prod_ini_de','prod_ini_ate','prod_ini_qtd','prod_ini_horas',
   'prod_fin_de','prod_fin_ate','prod_fin_qtd','prod_fin_horas',
@@ -1427,6 +1437,8 @@ function carregarEmpresa() {
     .forEach(id => { const el = document.getElementById(id); if(el && !d[id]) el.value = 0; });
   restaurarDados(d);
   atualizarBadgeEmpresa();
+  const elCpfResp = document.getElementById('cpf_responsavel');
+  if (elCpfResp) validarCampoCPF(elCpfResp);
   // Atualiza nome no select
   atualizarNomeSelect();
 }
@@ -1472,7 +1484,7 @@ function atualizarInfoSalvo(status) {
 // ═══════════════════════════════════════════════════════════
 function atualizarProgresso() {
   const d = dados[empresaAtual] || {};
-  const obrig = ['nome_empresa','cnpj','segmento','responsavel','equipamento','prod_ini_qtd','prod_ini_horas','prod_fin_qtd','prod_fin_horas','atendeu','signatario'];
+  const obrig = ['nome_empresa','cnpj','segmento','responsavel','cpf_responsavel','equipamento','prod_ini_qtd','prod_ini_horas','prod_fin_qtd','prod_fin_horas','atendeu','signatario'];
   const preench = obrig.filter(k => d[k] && String(d[k]).trim() !== '' && d[k] !== '0').length;
   const pct = Math.round((preench / obrig.length) * 100);
   document.getElementById('barra-progresso').style.width = pct + '%';
@@ -1631,6 +1643,37 @@ function mascaraCPF(el) {
        .replace(/(\d{3})\.(\d{3})(\d)/,'$1.$2.$3')
        .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/,'$1.$2.$3-$4');
   el.value = v;
+}
+
+// Valida dígitos verificadores do CPF (algoritmo oficial da Receita Federal)
+function validarCPF(cpf) {
+  const v = String(cpf).replace(/\D/g,'');
+  if (v.length !== 11 || /^(\d)\1{10}$/.test(v)) return false;
+  for (let t = 9; t <= 10; t++) {
+    let soma = 0;
+    for (let i = 0; i < t; i++) soma += parseInt(v[i]) * (t + 1 - i);
+    let digito = (soma * 10) % 11;
+    if (digito === 10) digito = 0;
+    if (digito !== parseInt(v[t])) return false;
+  }
+  return true;
+}
+
+function validarCampoCPF(el) {
+  const hint = document.getElementById(el.id + '_hint');
+  const v = el.value.replace(/\D/g,'');
+  if (!v) {
+    el.classList.remove('invalido');
+    if (hint) { hint.textContent = ''; hint.classList.remove('erro'); }
+    return true;
+  }
+  const ok = v.length === 11 && validarCPF(v);
+  el.classList.toggle('invalido', !ok);
+  if (hint) {
+    hint.textContent = ok ? '' : 'CPF inválido';
+    hint.classList.toggle('erro', !ok);
+  }
+  return ok;
 }
 
 // ═══════════════════════════════════════════════════════════

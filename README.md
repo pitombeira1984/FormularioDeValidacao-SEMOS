@@ -17,7 +17,7 @@ Sem configurar o Supabase (veja abaixo), o formulário funciona normalmente, mas
 ## Funcionalidades
 
 - **Formulário por empresa** — suporta até 36 empresas validadoras, selecionáveis por um seletor no topo da página.
-- **Identificação da empresa** — nome, CNPJ (com máscara automática), segmento, responsável, cargo, e-mail, nº de colaboradores e de máquinas de solda.
+- **Identificação da empresa** — nome, CNPJ (com máscara automática), segmento, responsável, CPF do responsável (com máscara e validação dos dígitos verificadores), cargo, e-mail, nº de colaboradores e de máquinas de solda.
 - **Descrição do processo** — processos de soldagem utilizados, equipamento monitorado, turno de operação, forma de controle antes do SEMOS e modo de uso do sistema.
 - **Medição de Produtividade** — compara um período inicial (sem SEMOS) e final (com SEMOS), calculando `Produção Total ÷ Horas Trabalhadas` e a variação percentual. Meta FINEP: ganho ≥ 20%.
 - **OEE (Eficiência Global dos Equipamentos)** — calcula Disponibilidade, Desempenho e Qualidade para os períodos inicial e final, e o OEE total (`Disponibilidade × Desempenho × Qualidade`). Meta FINEP: ganho ≥ 10%.
